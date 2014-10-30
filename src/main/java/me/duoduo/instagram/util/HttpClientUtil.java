@@ -1,12 +1,14 @@
 package me.duoduo.instagram.util;
 
-import java.net.URLEncoder;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.http.Consts;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -36,17 +38,9 @@ public class HttpClientUtil {
     }
 
     public static String get(String url, Map<String, Object> params) throws Exception {
-        if (params != null) {
-            StringBuilder sbd = new StringBuilder();
-            for (String name : params.keySet()) {
-                String value = URLEncoder.encode(params.get(name).toString(), "UTF-8");
-                sbd.append(name).append("=").append(value).append("&");
-            }
-            if (sbd.length() > 0) {
-                url += "?" + sbd.substring(0, sbd.length() - 1);
-            }
-        }
         HttpGet reqs = new HttpGet(url);
+        String queryStr = EntityUtils.toString(map2entity(params));
+        reqs.setURI(new URI(reqs.getURI().toString() + "?" + queryStr));
         CloseableHttpResponse resp = getHttpClient().execute(reqs);
         return EntityUtils.toString(resp.getEntity());
     }
@@ -56,15 +50,19 @@ public class HttpClientUtil {
     }
 
     public static String post(String url, Map<String, Object> params) throws Exception {
+        HttpPost post = new HttpPost(url);
+        post.setEntity(map2entity(params));
+        CloseableHttpResponse resp = getHttpClient().execute(post);
+        return EntityUtils.toString(resp.getEntity());
+    }
+
+    public static UrlEncodedFormEntity map2entity(Map<String, Object> params) {
+        List<NameValuePair> nvps = new ArrayList<NameValuePair>();
         if (params != null) {
             for (String name : params.keySet()) {
-                List<NameValuePair> nvps = new ArrayList<NameValuePair>();
-                nvps.add(new BasicNameValuePair(name, params.get(name).toString()));
                 nvps.add(new BasicNameValuePair(name, params.get(name).toString()));
             }
         }
-        HttpPost post = new HttpPost(url);
-        CloseableHttpResponse resp = getHttpClient().execute(post);
-        return EntityUtils.toString(resp.getEntity());
+        return new UrlEncodedFormEntity(nvps, Consts.UTF_8);
     }
 }
